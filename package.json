@@ -1,0 +1,17 @@
+{
+  "name": "softtek-notify-investigator",
+  "version": "1.0.0",
+  "main": "main.js",
+  "type": "module",
+  "repository": "git@github.com:diekmrcoin/softtek-notify-investigator.git",
+  "author": "Diego Maroto <diego.diemg@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "xlsx": "^0.18.5"
+  }
+}
