@@ -1,70 +1,74 @@
-import * as XLSX from "xlsx/xlsx.mjs";
-/* load 'fs' for readFile and writeFile support */
-import * as fs from "fs";
-XLSX.set_fs(fs);
-/* load 'stream' for stream support */
-import { Readable } from "stream";
-XLSX.stream.set_readable(Readable);
-/* load the codepage support library for extended support with older formats  */
-import * as cpexcel from "xlsx/dist/cpexcel.full.mjs";
-XLSX.set_cptable(cpexcel);
+import prompt from "prompt";
+import { promisify } from "util";
+import { WorkbookManager } from "./xlsx.js";
+const get = promisify(prompt.get);
+// Start the prompt
+prompt.start();
 
-import { join } from "path";
+// Define the prompt schema
+const mainSchema = {
+  properties: {
+    menu: {
+      description:
+        "Choose an option: 1) Set date, 2) Populate Excel, 3) Bundle into zip, 4) Send email, 5) Exit",
+      pattern: /^[1-5]$/,
+      message: "Option must be between 1 and 5",
+      required: true,
+      before: (value) => +value,
+    },
+  },
+};
 
-const year = new Date().getFullYear();
-const month = new Date().getMonth() + 1;
-
-let folder = join("output");
-// check if the folder output exists
-if (!fs.existsSync(folder)) {
-  fs.mkdirSync(folder);
-}
-// create year folder if doesn't exist
-folder = join("output", `${year}`);
-if (!fs.existsSync(folder)) {
-  fs.mkdirSync(folder);
-}
-// create month folder if doesn't exist
-folder = join("output", `${year}`, `${month}`);
-if (!fs.existsSync(folder)) {
-  fs.mkdirSync(folder);
-}
-
-const inputFileName = join("input", "default.xlsx");
-
-// Read the workbook
-const workbook = XLSX.readFile(inputFileName);
-
-// Get the first sheet
-const sheetName = workbook.SheetNames[0];
-let worksheet = workbook.Sheets[sheetName];
-
-// Convert the sheet to JSON
-let data = XLSX.utils.sheet_to_json(worksheet, { raw: true, defval: "" });
-
-for (const row of data) {
-  for (const key in row) {
-    if(key.startsWith("Fecha Desde")) {
-      row[key] = `15/${month}/${year}`;
-      continue;
-    }
-    if (key.startsWith("Fecha Hasta")) {
-      row[key] = `15/${month}/${year}`;
-      continue;
-    }
-    if(key.startsWith("Descripción de la Evidencia")) {
-      row[key] = "La descripción es un no se que y un no se cuanto";
-      continue;
-    }
+// Get the user's input
+get(mainSchema).then(async ({ menu }) => {
+  switch (menu) {
+    case 1:
+      console.log("You chose to set date");
+      // Do something to set date
+      break;
+    case 2:
+      console.log("You chose to populate Excel");
+      const dateSchema = {
+        properties: {
+          year: {
+            description: "Enter the year",
+            pattern: /^[0-9]{4}$/,
+            message: "Year must be a four-digit number",
+            required: true,
+            before: (value) => +value,
+          },
+          month: {
+            description: "Enter the month",
+            pattern: /^(1[0-2]|0?[1-9])$/,
+            message: "Month must be a number between 1 and 12",
+            required: true,
+            before: (value) => +value,
+          },
+          day: {
+            description: "Enter the day",
+            pattern: /^(3[01]|[12][0-9]|0?[1-9])$/,
+            message: "Day must be a number between 1 and 31",
+            required: true,
+            before: (value) => +value,
+          },
+        },
+      };
+      let { year, month, day } = await get(dateSchema);
+      const manager = new WorkbookManager(year, month, day);
+      const workbook = manager.setup();
+      manager.populate(workbook);
+      break;
+    case 3:
+      console.log("You chose to bundle into zip");
+      // Do something to bundle into zip
+      break;
+    case 4:
+      console.log("You chose to send email");
+      // Do something to send email
+      break;
+    default:
+      console.log("You chose to exit");
+      // Exit the application
+      process.exit();
   }
-}
-
-// Convert the JSON back to a worksheet
-worksheet = XLSX.utils.json_to_sheet(data);
-
-// Replace the old sheet
-workbook.Sheets[sheetName] = worksheet;
-
-// Write the workbook back to the file
-const outputFileName = join("output", `${year}`, `${month}`, `diego.maroto_Evidencias_${year}_${month}.xlsx`);
-XLSX.writeFile(workbook, outputFileName);
+});
